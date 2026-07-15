@@ -91,6 +91,7 @@ function logout() {
 async function inicializarSistema() {
     vincularEventosUI();
     bindAutocomplete();
+    bindDataLimiteAno();
     await carregarDadosServidor();
 }
 
@@ -311,11 +312,15 @@ function openModal(id, prefillCodigo){
   document.getElementById('fReferencia').value = r ? r.referencia : '';
   document.getElementById('fDataRegistro').value = r ? r.dataRegistro : new Date().toISOString().slice(0,10);
   document.getElementById('fDataLimite').value = r ? r.dataLimite : '';
+  const fPrazoEl = document.getElementById('fPrazoCorrente');
+  fPrazoEl.value = r ? (r.prazoCorrente||'') : '';
+  delete fPrazoEl.dataset.userEdited;
   document.getElementById('fLocalizacao').value = r ? r.localizacao : '';
   document.getElementById('fEstado').value = r ? (r.estado||'') : '';
   document.getElementById('fTermo').value = r ? r.termo : '';
   updateTTDPreview();
   if(!r) computeAndFillDataLimite();
+  syncDataLimiteAnoFromDate();
   document.getElementById('overlay').classList.add('active');
   document.getElementById('acList').style.display='none';
 }
@@ -341,6 +346,42 @@ function computeAndFillDataLimite(){
   const dataRegistro = document.getElementById('fDataRegistro').value;
   const calc = computeDataLimite(codigo, dataRegistro);
   if(calc) document.getElementById('fDataLimite').value = calc;
+  syncDataLimiteAnoFromDate();
+  const entry = TTD_MAP[codigo.toUpperCase()];
+  const fPrazo = document.getElementById('fPrazoCorrente');
+  if(entry && fPrazo && !fPrazo.dataset.userEdited){
+    fPrazo.value = entry.prazo_corrente || '';
+  }
+}
+
+/* ==================== DATA-LIMITE: SELEÇÃO SÓ POR ANO ==================== */
+function populateDataLimiteAnoOptions(){
+  const sel = document.getElementById('fDataLimiteAno');
+  if(!sel || sel.dataset.populated) return;
+  const anoAtual = new Date().getFullYear();
+  let opts = '<option value="">—</option>';
+  for(let a = anoAtual - 10; a <= anoAtual + 60; a++){
+    opts += `<option value="${a}">${a}</option>`;
+  }
+  sel.innerHTML = opts;
+  sel.dataset.populated = '1';
+}
+function syncDataLimiteAnoFromDate(){
+  const sel = document.getElementById('fDataLimiteAno');
+  const dataLimite = document.getElementById('fDataLimite').value;
+  if(!sel) return;
+  sel.value = dataLimite ? dataLimite.slice(0,4) : '';
+}
+function bindDataLimiteAno(){
+  const sel = document.getElementById('fDataLimiteAno');
+  const fPrazo = document.getElementById('fPrazoCorrente');
+  if(fPrazo) fPrazo.addEventListener('input', ()=>{ fPrazo.dataset.userEdited = '1'; });
+  if(!sel) return;
+  populateDataLimiteAnoOptions();
+  sel.addEventListener('change', ()=>{
+    if(sel.value) document.getElementById('fDataLimite').value = `${sel.value}-12-31`;
+  });
+  document.getElementById('fDataLimite').addEventListener('change', syncDataLimiteAnoFromDate);
 }
 
 function bindAutocomplete(){
@@ -394,7 +435,7 @@ async function salvarFormulario(){
     localizacao: document.getElementById('fLocalizacao').value.trim(),
     estado: document.getElementById('fEstado').value,
     termo: document.getElementById('fTermo').value.trim(),
-    prazoCorrente: entry ? entry.prazo_corrente : '',
+    prazoCorrente: document.getElementById('fPrazoCorrente').value.trim() || (entry ? entry.prazo_corrente : ''),
     prazoIntermediario: entry ? entry.prazo_intermediario : ''
   };
   if(!rec.caixa && !rec.codigo){
