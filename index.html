@@ -115,8 +115,16 @@
     </div>
     <div class="field"><label>Referência do documento</label><input type="text" id="fReferencia" placeholder="Descrição do conteúdo da caixa/documento"></div>
     <div class="field-row">
-      <div class="field"><label>Data do registro</label><input type="date" id="fDataRegistro"></div>
-      <div class="field"><label>Data-limite (calculada — editável)</label><input type="date" id="fDataLimite"></div>
+      <div class="field">
+        <label>Data-limite (calculada — editável)</label>
+        <input type="date" id="fDataLimite">
+        <div class="hint">Ou selecione só o ano:
+          <select id="fDataLimiteAno" class="mono" style="width:auto; display:inline-block; padding:4px 8px; margin-left:4px;">
+            <option value="">—</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Prazo fase corrente</label><input type="text" id="fPrazoCorrente" placeholder="ex: 5 anos"></div>
     </div>
     <div class="field-row">
       <div class="field"><label>Localização (arquivo deslizante)</label><input type="text" id="fLocalizacao"></div>
@@ -127,7 +135,10 @@
         </select>
       </div>
     </div>
-    <div class="field"><label>Termo de transferência</label><input type="text" id="fTermo"></div>
+    <div class="field-row">
+      <div class="field"><label>Termo de transferência</label><input type="text" id="fTermo"></div>
+      <div class="field"><label>Data do registro</label><input type="date" id="fDataRegistro"></div>
+    </div>
 
     <div class="modal-actions">
       <button class="btn ghost" id="btnExcluir" style="display:none; border-color:var(--rust-bright); color:var(--rust-bright);">Excluir registro</button>
