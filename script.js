@@ -315,6 +315,12 @@ function openModal(id, prefillCodigo){
   const fPrazoEl = document.getElementById('fPrazoCorrente');
   fPrazoEl.value = r ? (r.prazoCorrente||'') : '';
   delete fPrazoEl.dataset.userEdited;
+  const fPrazoIntEl = document.getElementById('fPrazoIntermediario');
+  fPrazoIntEl.value = r ? (r.prazoIntermediario||'') : '';
+  delete fPrazoIntEl.dataset.userEdited;
+  const fDestEl = document.getElementById('fDestinacao');
+  fDestEl.value = r ? (r.destinacao||'') : '';
+  delete fDestEl.dataset.userEdited;
   document.getElementById('fLocalizacao').value = r ? r.localizacao : '';
   document.getElementById('fEstado').value = r ? (r.estado||'') : '';
   document.getElementById('fTermo').value = r ? r.termo : '';
@@ -352,6 +358,14 @@ function computeAndFillDataLimite(){
   if(entry && fPrazo && !fPrazo.dataset.userEdited){
     fPrazo.value = entry.prazo_corrente || '';
   }
+  const fPrazoInt = document.getElementById('fPrazoIntermediario');
+  if(entry && fPrazoInt && !fPrazoInt.dataset.userEdited){
+    fPrazoInt.value = entry.prazo_intermediario || '';
+  }
+  const fDest = document.getElementById('fDestinacao');
+  if(entry && fDest && !fDest.dataset.userEdited){
+    fDest.value = entry.destinacao || '';
+  }
 }
 
 /* ==================== DATA-LIMITE: SELEÇÃO SÓ POR ANO ==================== */
@@ -376,6 +390,10 @@ function bindDataLimiteAno(){
   const sel = document.getElementById('fDataLimiteAno');
   const fPrazo = document.getElementById('fPrazoCorrente');
   if(fPrazo) fPrazo.addEventListener('input', ()=>{ fPrazo.dataset.userEdited = '1'; });
+  const fPrazoInt = document.getElementById('fPrazoIntermediario');
+  if(fPrazoInt) fPrazoInt.addEventListener('input', ()=>{ fPrazoInt.dataset.userEdited = '1'; });
+  const fDest = document.getElementById('fDestinacao');
+  if(fDest) fDest.addEventListener('change', ()=>{ fDest.dataset.userEdited = '1'; });
   if(!sel) return;
   populateDataLimiteAnoOptions();
   sel.addEventListener('change', ()=>{
@@ -431,12 +449,12 @@ async function salvarFormulario(){
     referencia: document.getElementById('fReferencia').value.trim(),
     dataRegistro: document.getElementById('fDataRegistro').value,
     dataLimite: document.getElementById('fDataLimite').value,
-    destinacao: entry ? entry.destinacao : '',
+    destinacao: document.getElementById('fDestinacao').value.trim() || (entry ? entry.destinacao : ''),
     localizacao: document.getElementById('fLocalizacao').value.trim(),
     estado: document.getElementById('fEstado').value,
     termo: document.getElementById('fTermo').value.trim(),
     prazoCorrente: document.getElementById('fPrazoCorrente').value.trim() || (entry ? entry.prazo_corrente : ''),
-    prazoIntermediario: entry ? entry.prazo_intermediario : ''
+    prazoIntermediario: document.getElementById('fPrazoIntermediario').value.trim() || (entry ? entry.prazo_intermediario : '')
   };
   if(!rec.caixa && !rec.codigo){
     showToast('Informe ao menos o código e a caixa.');
