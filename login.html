@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — SGA Fiocruz/COC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-page">
+
+  <div class="ledger-bg" aria-hidden="true"></div>
+
+  <div class="login-card">
+    <div class="rivet rivet-tl"></div>
+    <div class="rivet rivet-tr"></div>
+
+    <p class="eyebrow" style="text-align:center;">Fiocruz · Casa de Oswaldo Cruz</p>
+    <h1 class="login-title">Sistema de Gestão<br>Arquivística</h1>
+    <p class="login-sub">Departamento de Arquivo e Documentação</p>
+
+    <form id="loginForm">
+      <div class="field">
+        <label>Matrícula ou usuário</label>
+        <input type="text" id="usuario" placeholder="ex: maria.arquivista" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="senha" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="btn primary login-submit" id="btnEntrar">
+        <span>Acessar sistema</span>
+      </button>
+    </form>
+
+    <div id="errorMsg" class="error-msg"></div>
+
+    <!-- selo que "carimba" a tela ao autenticar com sucesso -->
+    <div class="stamp-seal" id="stampSeal" aria-hidden="true">
+      <div class="stamp-seal-ring">
+        <span>ACESSO</span>
+        <span class="stamp-seal-center">✓</span>
+        <span>CONCEDIDO</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="login-footnote">Acervo protegido · uso interno Fiocruz/COC</p>
+
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

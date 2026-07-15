@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sistema de Gestão Arquivística — Fiocruz/COC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="app-header">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
+    <div>
+      <p class="eyebrow">Departamento de Arquivo e Documentação · Casa de Oswaldo Cruz</p>
+      <h1 class="app-title">Sistema de Gestão Arquivística</h1>
+      <p class="app-sub">Controle de caixas e documentos integrado à Tabela de Temporalidade da Fiocruz (607 códigos).</p>
+    </div>
+    <div class="user-session">
+      <span id="userBadge" class="badge">Carregando...</span>
+      <button class="btn ghost" onclick="logout()" style="border-color: var(--rust); color: var(--rust-bright);">Sair</button>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn primary" id="btnNovo">＋ Novo registro</button>
+    <button class="btn" id="btnImportar">⇪ Importar planilha (.xlsx)</button>
+    <button class="btn" id="btnExportar">⇩ Exportar planilha (.xlsx)</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="tab active" data-view="registros">01 · REGISTROS</div>
+  <div class="tab" data-view="painel">02 · PAINEL</div>
+  <div class="tab" data-view="ttd">03 · TABELA DE TEMPORALIDADE</div>
+</nav>
+
+<div class="content">
+  <!-- REGISTROS -->
+  <div class="view active" id="view-registros">
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="icon">⌕</span>
+        <input type="text" id="searchRegistros" placeholder="Buscar por código, caixa, referência ou processo…">
+      </div>
+      <select class="filter" id="filterDestinacao">
+        <option value="">Todas as destinações</option>
+        <option value="Guarda permanente">Guarda permanente</option>
+        <option value="Eliminação">Eliminação</option>
+      </select>
+      <select class="filter" id="filterStatus">
+        <option value="">Todos os status</option>
+        <option value="vencido">Prazo vencido</option>
+        <option value="avencer">A vencer em 90 dias</option>
+        <option value="ok">Dentro do prazo</option>
+      </select>
+    </div>
+    <div class="card table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Caixa</th><th>Código</th><th>Classificação</th><th>Referência</th>
+            <th>Data-limite</th><th>Destinação final</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tblRegistros"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState">
+        <div class="big">Carregando acervo central...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAINEL -->
+  <div class="view" id="view-painel">
+    <div class="stat-grid" id="statGrid"></div>
+    <div class="card" style="padding:18px 20px;">
+      <h3 class="section-title">Próximos vencimentos (90 dias)</h3>
+      <table>
+        <thead><tr><th>Caixa</th><th>Código</th><th>Classificação</th><th>Data-limite</th><th>Dias restantes</th></tr></thead>
+        <tbody id="tblVencimentos"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TTD -->
+  <div class="view" id="view-ttd">
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="icon">⌕</span>
+        <input type="text" id="searchTTD" placeholder="Buscar código ou descrição na tabela de temporalidade…">
+      </div>
+    </div>
+    <div class="card" id="ttdTree" style="max-height:70vh; overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Novo registro</h2>
+    <p class="modal-sub">Digite o código de classificação para preencher automaticamente os prazos de guarda conforme a TTD/Fiocruz.</p>
+
+    <div class="field" style="position:relative;">
+      <label>Código de classificação</label>
+      <input type="text" id="fCodigo" class="mono" placeholder="ex: 020.11 ou FOC.522" autocomplete="off">
+      <div class="autocomplete-list" id="acList" style="display:none;"></div>
+    </div>
+
+    <div id="ttdPreview" style="display:none;" class="ttd-preview"></div>
+
+    <div class="field-row">
+      <div class="field"><label>Caixa</label><input type="text" id="fCaixa" placeholder="ex: 042"></div>
+      <div class="field"><label>Nº processo / EPI</label><input type="text" id="fProcesso"></div>
+    </div>
+    <div class="field"><label>Referência do documento</label><input type="text" id="fReferencia" placeholder="Descrição do conteúdo da caixa/documento"></div>
+    <div class="field-row">
+      <div class="field"><label>Data do registro</label><input type="date" id="fDataRegistro"></div>
+      <div class="field"><label>Data-limite (calculada — editável)</label><input type="date" id="fDataLimite"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Localização (arquivo deslizante)</label><input type="text" id="fLocalizacao"></div>
+      <div class="field"><label>Estado de conservação</label>
+        <select id="fEstado">
+          <option value="">—</option>
+          <option>Bom</option><option>Regular</option><option>Ruim</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Termo de transferência</label><input type="text" id="fTermo"></div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" id="btnExcluir" style="display:none; border-color:var(--rust-bright); color:var(--rust-bright);">Excluir registro</button>
+      <div style="display:flex; gap:10px; margin-left:auto;">
+        <button class="btn ghost" id="btnCancelar">Cancelar</button>
+        <button class="btn primary" id="btnSalvar">Salvar registro</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
