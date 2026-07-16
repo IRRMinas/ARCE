@@ -165,7 +165,9 @@ function computeDataLimite(codigo, dataRegistro){
 function statusOf(dataLimite){
   if(!dataLimite) return {key:'ok', label:'Sem data', days:null};
   const today = new Date(); today.setHours(0,0,0,0);
-  const lim = new Date(dataLimite+'T00:00:00');
+  const ymd = String(dataLimite).slice(0,10);
+  const lim = new Date(ymd+'T00:00:00');
+  if(isNaN(lim)) return {key:'ok', label:'Sem data', days:null};
   const days = Math.round((lim-today)/86400000);
   if(days<0) return {key:'vencido', label:`Vencido há ${Math.abs(days)}d`, days};
   if(days<=90) return {key:'avencer', label:`Vence em ${days}d`, days};
@@ -177,6 +179,17 @@ function stampClassForDestinacao(dest){
   if(d.includes('permanente')) return 'permanente';
   if(d.includes('elimina')) return 'eliminacao';
   return 'ok';
+}
+function anoOf(dataStr){
+  if(!dataStr) return '';
+  return String(dataStr).slice(0,4);
+}
+function fmtDataBR(dataStr){
+  if(!dataStr) return '';
+  const ymd = String(dataStr).slice(0,10);
+  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return ymd;
+  return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
 function renderAll(){
@@ -218,8 +231,13 @@ function renderRegistros(){
       <td><span class="codigo-chip">${esc(r.codigo||'—')}</span></td>
       <td>${esc(r.classificacao||'')}</td>
       <td>${esc(r.referencia||'')}</td>
-      <td class="mono">${r.dataLimite||'—'}</td>
+      <td class="mono">${esc(r.processo||'—')}</td>
+      <td class="mono">${anoOf(r.dataLimite)||'—'}</td>
+      <td>${esc(r.prazoCorrente||'—')}</td>
+      <td>${esc(r.prazoIntermediario||'—')}</td>
       <td><span class="stamp ${destStamp}">${esc(r.destinacao||'—')}</span></td>
+      <td>${esc(r.localizacao||'—')}</td>
+      <td class="mono">${fmtDataBR(r.dataRegistro)||'—'}</td>
       <td><span class="stamp ${st.key}">${st.label}</span></td>
     </tr>`;
   }).join('');
@@ -246,7 +264,7 @@ function renderPainel(){
     .sort((a,b)=>a.st.days-b.st.days);
   document.getElementById('tblVencimentos').innerHTML = upcoming.length ? upcoming.map(x=>`
     <tr><td class="mono">${esc(x.r.caixa||'—')}</td><td><span class="codigo-chip">${esc(x.r.codigo||'—')}</span></td>
-    <td>${esc(x.r.classificacao||'')}</td><td class="mono">${x.r.dataLimite}</td>
+    <td>${esc(x.r.classificacao||'')}</td><td class="mono">${anoOf(x.r.dataLimite)}</td>
     <td><span class="stamp avencer">${x.st.days} dias</span></td></tr>`).join('')
     : `<tr><td colspan="5" style="color:var(--paper-dim); padding:20px 14px;">Nenhum prazo vencendo nos próximos 90 dias.</td></tr>`;
 }
