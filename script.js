@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', executarLogin);
+        const primeiroAcessoForm = document.getElementById('primeiroAcessoForm');
+        if (primeiroAcessoForm) primeiroAcessoForm.addEventListener('submit', executarDefinirSenha);
+        const btnVoltar = document.getElementById('btnVoltarLogin');
+        if (btnVoltar) btnVoltar.addEventListener('click', voltarParaLogin);
         return;
     }
 
@@ -40,13 +44,14 @@ function checarConfig(){
     return true;
 }
 
+let usuarioEmPrimeiroAcesso = '';
+
 async function executarLogin(e) {
     e.preventDefault();
     const usuario = document.getElementById('usuario').value.trim();
     const senha = document.getElementById('senha').value;
     const errorMsg = document.getElementById('errorMsg');
     const btn = document.getElementById('btnEntrar');
-    const stamp = document.getElementById('stampSeal');
 
     if(!checarConfig()){
         errorMsg.textContent = '⚠️ Configure a API_URL em config.js antes de usar o sistema.';
@@ -58,18 +63,21 @@ async function executarLogin(e) {
     btn.textContent = 'Validando…';
 
     try {
-        const url = `${CONFIG.API_URL}?action=login&usuario=${encodeURIComponent(usuario)}&senha=${encodeURIComponent(senha)}`;
-        const response = await fetch(url);
+        const response = await fetch(CONFIG.API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'login', usuario, senha })
+        });
         const data = await response.json();
 
         if (data.success) {
-            localStorage.setItem('arquivista_user', JSON.stringify(data.usuario));
-            if(stamp){
-                stamp.classList.add('stamped');
-                setTimeout(()=>{ window.location.href = 'index.html'; }, 650);
-            } else {
-                window.location.href = 'index.html';
-            }
+            entrarNoSistema(data.usuario, data.token);
+        } else if (data.primeiroAcesso) {
+            usuarioEmPrimeiroAcesso = usuario;
+            document.getElementById('paUsuarioLabel').textContent = usuario;
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('primeiroAcessoForm').style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Acessar sistema';
         } else {
             errorMsg.textContent = '❌ ' + (data.message || 'Usuário ou senha inválidos.');
             btn.disabled = false;
@@ -82,8 +90,68 @@ async function executarLogin(e) {
     }
 }
 
+async function executarDefinirSenha(e) {
+    e.preventDefault();
+    const novaSenha = document.getElementById('paNovaSenha').value;
+    const confirmar = document.getElementById('paConfirmarSenha').value;
+    const errorMsg = document.getElementById('errorMsg');
+    const btn = document.getElementById('btnDefinirSenha');
+
+    errorMsg.textContent = '';
+    if (novaSenha.length < 6) {
+        errorMsg.textContent = '❌ A senha precisa ter pelo menos 6 caracteres.';
+        return;
+    }
+    if (novaSenha !== confirmar) {
+        errorMsg.textContent = '❌ As senhas digitadas não coincidem.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Salvando…';
+
+    try {
+        const response = await fetch(CONFIG.API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'definirSenha', usuario: usuarioEmPrimeiroAcesso, novaSenha })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            entrarNoSistema(data.usuario, data.token);
+        } else {
+            errorMsg.textContent = '❌ ' + (data.message || 'Não foi possível definir a senha.');
+            btn.disabled = false;
+            btn.textContent = 'Criar senha e entrar';
+        }
+    } catch (error) {
+        errorMsg.textContent = '❌ Não foi possível conectar ao servidor central.';
+        btn.disabled = false;
+        btn.textContent = 'Criar senha e entrar';
+    }
+}
+
+function voltarParaLogin() {
+    document.getElementById('primeiroAcessoForm').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('errorMsg').textContent = '';
+}
+
+function entrarNoSistema(usuarioObj, token) {
+    localStorage.setItem('arquivista_user', JSON.stringify(usuarioObj));
+    localStorage.setItem('arquivista_token', token);
+    const stamp = document.getElementById('stampSeal');
+    if(stamp){
+        stamp.classList.add('stamped');
+        setTimeout(()=>{ window.location.href = 'index.html'; }, 650);
+    } else {
+        window.location.href = 'index.html';
+    }
+}
+
 function logout() {
     localStorage.removeItem('arquivista_user');
+    localStorage.removeItem('arquivista_token');
     window.location.href = 'login.html';
 }
 
@@ -109,11 +177,15 @@ async function carregarDadosServidor() {
         emptyState.innerHTML = `<div class="big">Carregando acervo central…</div>`;
     }
     try {
-        const response = await fetch(`${CONFIG.API_URL}?action=obterDocumentos`);
+        const token = localStorage.getItem('arquivista_token') || '';
+        const response = await fetch(`${CONFIG.API_URL}?action=obterDocumentos&token=${encodeURIComponent(token)}`);
         const data = await response.json();
         if (data.success) {
             RECORDS = data.documentos || [];
             renderAll();
+        } else if (data.sessaoInvalida) {
+            showToast('Sua sessão expirou. Faça login novamente.');
+            setTimeout(logout, 1500);
         } else {
             showToast('Erro ao carregar acervo: ' + (data.message||''));
         }
@@ -483,13 +555,16 @@ async function salvarFormulario(){
   try {
       const response = await fetch(CONFIG.API_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'salvarDocumento', documento: rec })
+          body: JSON.stringify({ action: 'salvarDocumento', documento: rec, token: localStorage.getItem('arquivista_token') || '' })
       });
       const data = await response.json();
       if(data.success) {
           await carregarDadosServidor();
           closeModal();
           showToast('Registro salvo no banco de dados!');
+      } else if (data.sessaoInvalida) {
+          showToast('Sua sessão expirou. Faça login novamente.');
+          setTimeout(logout, 1500);
       } else {
           showToast('Erro: ' + (data.message||'não foi possível salvar.'));
       }
@@ -504,13 +579,16 @@ async function deletarRegistro(){
   try {
       const response = await fetch(CONFIG.API_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'deletarDocumento', id: editingId })
+          body: JSON.stringify({ action: 'deletarDocumento', id: editingId, token: localStorage.getItem('arquivista_token') || '' })
       });
       const data = await response.json();
       if(data.success) {
           await carregarDadosServidor();
           closeModal();
           showToast('Registro excluído.');
+      } else if (data.sessaoInvalida) {
+          showToast('Sua sessão expirou. Faça login novamente.');
+          setTimeout(logout, 1500);
       } else {
           showToast('Erro ao excluir: ' + (data.message||''));
       }
@@ -577,12 +655,15 @@ async function processarPlanilhaLocal(file){
       showToast(`Enviando lote de ${loteDocs.length} registro(s)…`);
       const response = await fetch(CONFIG.API_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'salvarLote', documentos: loteDocs })
+          body: JSON.stringify({ action: 'salvarLote', documentos: loteDocs, token: localStorage.getItem('arquivista_token') || '' })
       });
       const resData = await response.json();
       if(resData.success) {
           await carregarDadosServidor();
           showToast('Lote importado e sincronizado com a nuvem!');
+      } else if (resData.sessaoInvalida) {
+          showToast('Sua sessão expirou. Faça login novamente.');
+          setTimeout(logout, 1500);
       } else {
           showToast('Erro ao importar: ' + (resData.message||''));
       }
