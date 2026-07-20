@@ -35,6 +35,29 @@
       </button>
     </form>
 
+    <!-- Tela de primeiro acesso: aparece quando o usuário existe na planilha
+         mas ainda não tem senha cadastrada -->
+    <form id="primeiroAcessoForm" style="display:none;">
+      <p class="login-sub" style="margin-bottom:16px; text-align:left;">
+        Primeiro acesso identificado para <strong id="paUsuarioLabel"></strong>. Crie sua senha para continuar.
+      </p>
+      <div class="field">
+        <label>Nova senha</label>
+        <input type="password" id="paNovaSenha" placeholder="mínimo 6 caracteres" required autocomplete="new-password" minlength="6">
+      </div>
+      <div class="field">
+        <label>Confirmar senha</label>
+        <input type="password" id="paConfirmarSenha" placeholder="repita a senha" required autocomplete="new-password" minlength="6">
+      </div>
+
+      <button type="submit" class="btn primary login-submit" id="btnDefinirSenha">
+        <span>Criar senha e entrar</span>
+      </button>
+      <button type="button" class="btn ghost login-submit" id="btnVoltarLogin" style="margin-top:8px;">
+        <span>Voltar</span>
+      </button>
+    </form>
+
     <div id="errorMsg" class="error-msg"></div>
 
     <!-- selo que "carimba" a tela ao autenticar com sucesso -->
