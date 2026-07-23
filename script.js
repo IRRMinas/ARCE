@@ -207,8 +207,6 @@ function vincularEventosUI() {
     document.getElementById('filterDestinacao').addEventListener('change', renderRegistros);
     document.getElementById('filterStatus').addEventListener('change', renderRegistros);
     document.getElementById('searchTTD').addEventListener('input', (e)=>renderTTDTree(e.target.value));
-    document.getElementById('btnImportar').addEventListener('click', ()=>document.getElementById('fileInput').click());
-    document.getElementById('fileInput').addEventListener('change', (e)=>{ if(e.target.files[0]) processarPlanilhaLocal(e.target.files[0]); e.target.value=''; });
     document.getElementById('btnExportar').addEventListener('click', exportarParaExcel);
     document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
 }
@@ -292,7 +290,7 @@ function renderRegistros(){
   emptyState.style.display = list.length === 0 ? 'block' : 'none';
   if(list.length === 0) {
       emptyState.innerHTML = RECORDS.length === 0
-        ? `<div class="big">Nenhum registro ainda</div><div>Importe a planilha existente ou crie um novo registro para começar.</div>`
+        ? `<div class="big">Nenhum registro ainda</div><div>Crie um novo registro para começar.</div>`
         : `<div class="big">Nenhum registro encontrado</div><div>Refine sua busca ou limpe os filtros.</div>`;
   }
   tbody.innerHTML = list.map(r=>{
@@ -597,82 +595,10 @@ async function deletarRegistro(){
   }
 }
 
-/* ==================== IMPORTAÇÃO / EXPORTAÇÃO XLSX ==================== */
+/* ==================== EXPORTAÇÃO XLSX ==================== */
 const COLS = ['CAIXA','CÓDIGO','CLASSIFICAÇÃO','REFERÊNCIA DO DOCUMENTO','Nº PROCESSO/EPI','DATA-LIMITE',
   'PRAZO FASE CORRENTE','PRAZO FASE INTERMEDIÁRIA','DESTINAÇÃO FINAL','LOCALIZAÇÃO NO ARQUIVO DESLIZANTE',
   'ESTADO DE CONSERVAÇÃO','TERMO DE TRANSFERÊNCIA','DATA DO REGISTRO'];
-
-function excelDateToStr(v){
-  if(v==null || v==='') return '';
-  if(typeof v === 'number'){
-    const d = XLSX.SSF.parse_date_code(v);
-    return d ? `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}` : '';
-  }
-  const s = String(v).trim();
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if(m) return `${m[3]}-${m[2]}-${m[1]}`;
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
-}
-
-async function processarPlanilhaLocal(file){
-  const reader = new FileReader();
-  reader.onload = async (e)=>{
-    try{
-      const wb = XLSX.read(e.target.result, {type:'binary'});
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-      const header = rows[0].map(h=>String(h).trim().toUpperCase());
-      let loteDocs = [];
-
-      for(let i=1;i<rows.length;i++){
-        const row = rows[i];
-        if(!row || row.every(c=>c==='' || c==null)) continue;
-        const get = (name)=>{ const idx = header.indexOf(name); return idx>=0 ? row[idx] : ''; };
-        const codigo = String(get('CÓDIGO')||'').trim();
-        const caixa = String(get('CAIXA')||'').trim();
-        if(!codigo && !caixa) continue;
-        const entry = TTD_MAP[codigo.toUpperCase()];
-        loteDocs.push({
-          id: 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-          codigo,
-          classificacao: String(get('CLASSIFICAÇÃO')||(entry?entry.descritor:'')||''),
-          caixa,
-          processo: String(get('Nº PROCESSO/EPI')||''),
-          referencia: String(get('REFERÊNCIA DO DOCUMENTO')||''),
-          dataRegistro: excelDateToStr(get('DATA DO REGISTRO')),
-          dataLimite: excelDateToStr(get('DATA-LIMITE')),
-          prazoCorrente: String(get('PRAZO FASE CORRENTE')||(entry?entry.prazo_corrente:'')||''),
-          prazoIntermediario: String(get('PRAZO FASE INTERMEDIÁRIA')||(entry?entry.prazo_intermediario:'')||''),
-          destinacao: String(get('DESTINAÇÃO FINAL')||(entry?entry.destinacao:'')||''),
-          localizacao: String(get('LOCALIZAÇÃO NO ARQUIVO DESLIZANTE')||''),
-          estado: String(get('ESTADO DE CONSERVAÇÃO')||''),
-          termo: String(get('TERMO DE TRANSFERÊNCIA')||''),
-        });
-      }
-
-      if(!loteDocs.length){ showToast('Nenhuma linha válida encontrada na planilha.'); return; }
-
-      showToast(`Enviando lote de ${loteDocs.length} registro(s)…`);
-      const response = await fetch(CONFIG.API_URL, {
-          method: 'POST',
-          body: JSON.stringify({ action: 'salvarLote', documentos: loteDocs, token: localStorage.getItem('arquivista_token') || '' })
-      });
-      const resData = await response.json();
-      if(resData.success) {
-          await carregarDadosServidor();
-          showToast('Lote importado e sincronizado com a nuvem!');
-      } else if (resData.sessaoInvalida) {
-          showToast('Sua sessão expirou. Faça login novamente.');
-          setTimeout(logout, 1500);
-      } else {
-          showToast('Erro ao importar: ' + (resData.message||''));
-      }
-    }catch(err){
-      showToast('Erro ao ler ou processar planilha.');
-    }
-  };
-  reader.readAsBinaryString(file);
-}
 
 function exportarParaExcel(){
   const data = [COLS];
