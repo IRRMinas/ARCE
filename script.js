@@ -394,27 +394,39 @@ function openModal(id, prefillCodigo){
   document.getElementById('modalTitle').textContent = id ? 'Editar registro' : 'Novo registro';
   document.getElementById('btnExcluir').style.display = id ? 'inline-flex' : 'none';
   const r = id ? RECORDS.find(x=>x.id===id) : null;
-  document.getElementById('fCodigo').value = r ? r.codigo : (prefillCodigo||'');
-  document.getElementById('fCaixa').value = r ? r.caixa : '';
-  document.getElementById('fProcesso').value = r ? r.processo : '';
-  document.getElementById('fReferencia').value = r ? r.referencia : '';
-  document.getElementById('fDataRegistro').value = r ? r.dataRegistro : new Date().toISOString().slice(0,10);
-  document.getElementById('fDataLimite').value = r ? r.dataLimite : '';
+  
+  document.getElementById('fCodigo').value = r ? (r.codigo||'') : (prefillCodigo||'');
+  document.getElementById('fCaixa').value = r ? (r.caixa||'') : '';
+  document.getElementById('fProcesso').value = r ? (r.processo||'') : '';
+  document.getElementById('fReferencia').value = r ? (r.referencia||'') : '';
+  document.getElementById('fDataRegistro').value = r ? (r.dataRegistro||'') : new Date().toISOString().slice(0,10);
+  document.getElementById('fDataLimite').value = r ? (r.dataLimite||'') : '';
+  
+  // Campo Fase Corrente (Ano) - aceita texto livre com múltiplos anos
+  document.getElementById('fDataLimiteAno').value = r ? (r.dataLimite||'') : '';
+  
   const fPrazoEl = document.getElementById('fPrazoCorrente');
   fPrazoEl.value = r ? (r.prazoCorrente||'') : '';
   delete fPrazoEl.dataset.userEdited;
+  
   const fPrazoIntEl = document.getElementById('fPrazoIntermediario');
   fPrazoIntEl.value = r ? (r.prazoIntermediario||'') : '';
   delete fPrazoIntEl.dataset.userEdited;
+  
   const fDestEl = document.getElementById('fDestinacao');
   fDestEl.value = r ? (r.destinacao||'') : '';
   delete fDestEl.dataset.userEdited;
-  document.getElementById('fLocalizacao').value = r ? r.localizacao : '';
+  
+  document.getElementById('fLocalizacao').value = r ? (r.localizacao||'') : '';
+  
+  // Estado de Conservação agora é TextArea
   document.getElementById('fEstado').value = r ? (r.estado||'') : '';
-  document.getElementById('fTermo').value = r ? r.termo : '';
+  
+  document.getElementById('fTermo').value = r ? (r.termo||'') : '';
+  
   updateTTDPreview();
   if(!r) computeAndFillDataLimite();
-  syncDataLimiteAnoFromDate();
+  
   document.getElementById('overlay').classList.add('active');
   document.getElementById('acList').style.display='none';
 }
@@ -469,25 +481,22 @@ function populateDataLimiteAnoOptions(){
   sel.dataset.populated = '1';
 }
 function syncDataLimiteAnoFromDate(){
-  const sel = document.getElementById('fDataLimiteAno');
+  const inputAno = document.getElementById('fDataLimiteAno');
   const dataLimite = document.getElementById('fDataLimite').value;
-  if(!sel) return;
-  sel.value = dataLimite ? dataLimite.slice(0,4) : '';
+  if(!inputAno) return;
+  if(dataLimite && !inputAno.value){
+    inputAno.value = dataLimite.slice(0,4);
+  }
 }
 function bindDataLimiteAno(){
-  const sel = document.getElementById('fDataLimiteAno');
-  const fPrazo = document.getElementById('fPrazoCorrente');
-  if(fPrazo) fPrazo.addEventListener('input', ()=>{ fPrazo.dataset.userEdited = '1'; });
-  const fPrazoInt = document.getElementById('fPrazoIntermediario');
-  if(fPrazoInt) fPrazoInt.addEventListener('input', ()=>{ fPrazoInt.dataset.userEdited = '1'; });
-  const fDest = document.getElementById('fDestinacao');
-  if(fDest) fDest.addEventListener('change', ()=>{ fDest.dataset.userEdited = '1'; });
-  if(!sel) return;
-  populateDataLimiteAnoOptions();
-  sel.addEventListener('change', ()=>{
-    if(sel.value) document.getElementById('fDataLimite').value = `${sel.value}-12-31`;
+  const inputAno = document.getElementById('fDataLimiteAno');
+  const hiddenData = document.getElementById('fDataLimite');
+  if(!inputAno) return;
+  
+  inputAno.addEventListener('input', ()=>{
+    // Salva o valor exato no hidden pra enviar pra planilha
+    hiddenData.value = inputAno.value.trim();
   });
-  document.getElementById('fDataLimite').addEventListener('change', syncDataLimiteAnoFromDate);
 }
 
 function bindAutocomplete(){
