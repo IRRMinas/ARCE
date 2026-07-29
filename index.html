@@ -105,12 +105,13 @@
   </div>
 </div>
 
-<!-- MODAL DE CADASTRO / EDIÇÃO -->
+<!-- MODAL DE CADASTRO / EDIÇÃO REFORMULADO -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2 id="modalTitle">Novo registro</h2>
     <p class="modal-sub">Digite o código de classificação para preencher automaticamente os prazos de guarda conforme a TTD/Fiocruz.</p>
 
+    <!-- CÓDIGO DE CLASSIFICAÇÃO -->
     <div class="field" style="position:relative;">
       <label>Código de classificação</label>
       <input type="text" id="fCodigo" class="mono" placeholder="ex: 020.11 ou FOC.522" autocomplete="off">
@@ -119,55 +120,62 @@
 
     <div id="ttdPreview" style="display:none;" class="ttd-preview"></div>
 
+    <!-- CAIXA E PROCESSO -->
     <div class="field-row">
-      <div class="field"><label>Caixa</label><input type="text" id="fCaixa" placeholder="ex: Z-01"></div>
+      <div class="field"><label>Caixa</label><input type="text" id="fCaixa" placeholder="ex: z-06"></div>
       <div class="field"><label>Nº processo / EPI</label><input type="text" id="fProcesso" placeholder="ex: 25381.000003/2017-93"></div>
     </div>
-    <div class="field"><label>Referência do documento</label><input type="text" id="fReferencia" placeholder="Descrição do conteúdo da caixa/documento"></div>
-    
-    <div class="field-row">
-      <div class="field">
-        <label>Fase Corrente (Ano)</label>
-        <select id="fDataLimiteAno" class="mono">
-          <option value="">—</option>
-        </select>
-        <input type="hidden" id="fDataLimite">
-        <div class="hint">Calculada automaticamente pela TTD quando possível. Ajuste o ano se necessário.</div>
-      </div>
-      <div class="field"><label>Fim do Prazo Corrente</label><input type="text" id="fPrazoCorrente" placeholder="ex: Enquanto vigora"></div>
+
+    <!-- REFERÊNCIA DO DOCUMENTO (LARGURA TOTAL) -->
+    <div class="field">
+      <label>Referência do documento</label>
+      <input type="text" id="fReferencia" placeholder="ex: Prontuários Médicos 1997 Pacientes Negativos e Positivos de 461 a 538">
     </div>
 
+    <!-- FASE CORRENTE (PERMITE MÚLTIPLOS ANOS) E FIM DO PRAZO CORRENTE -->
     <div class="field-row">
-      <div class="field"><label>Prazo Fase Intermediária</label><input type="text" id="fPrazoIntermediario" placeholder="ex: 5 ANOS"></div>
+      <div class="field">
+        <label>Fase Corrente (Ano / Anos)</label>
+        <input type="text" id="fDataLimiteAno" class="mono" placeholder="ex: 2000 ou 2002, 2003, 2004, 2005">
+        <input type="hidden" id="fDataLimite">
+        <div class="hint">Digite o ano ou a lista de anos separados por vírgula.</div>
+      </div>
+      <div class="field"><label>Fim do Prazo Corrente</label><input type="text" id="fPrazoCorrente" placeholder="ex: 1997 ou Enquanto vigora"></div>
+    </div>
+
+    <!-- PRAZO INTERMEDIÁRIO E DESTINAÇÃO FINAL -->
+    <div class="field-row">
+      <div class="field"><label>Prazo Fase Intermediária</label><input type="text" id="fPrazoIntermediario" placeholder="ex: 2020 ou 5 ANOS"></div>
       <div class="field"><label>Destinação Final</label>
         <select id="fDestinacao">
           <option value="">—</option>
-          <option>Guarda permanente</option>
-          <option>Eliminação</option>
-          <option>ELIMINAÇÃO</option>
-          <option>GUARDA PERMANENTE</option>
+          <option value="Guarda permanente">Guarda permanente</option>
+          <option value="Eliminação">Eliminação</option>
+          <option value="GUARDA PERMANENTE">GUARDA PERMANENTE</option>
+          <option value="ELIMINAÇÃO">ELIMINAÇÃO</option>
         </select>
       </div>
     </div>
 
-    <div class="field-row">
-      <div class="field"><label>Localização no Arquivo Deslizante</label><input type="text" id="fLocalizacao" placeholder="ex: C4-P7"></div>
-      <div class="field"><label>Estado de conservação</label>
-        <select id="fEstado">
-          <option value="">—</option>
-          <option>Bom</option>
-          <option>Os documentos estão em bom estado.</option>
-          <option>Regular</option>
-          <option>Ruim</option>
-        </select>
-      </div>
+    <!-- LOCALIZAÇÃO -->
+    <div class="field">
+      <label>Localização no Arquivo Deslizante</label>
+      <input type="text" id="fLocalizacao" placeholder="ex: C4-P7">
     </div>
 
+    <!-- ESTADO DE CONSERVAÇÃO (CAMPO TEXTO DE LARGURA TOTAL) -->
+    <div class="field">
+      <label>Estado de conservação</label>
+      <textarea id="fEstado" placeholder="ex: Os documentos estão embalados em um papel cartão. Folhas amassadas com grampos"></textarea>
+    </div>
+
+    <!-- TERMO E DATA REGISTRO -->
     <div class="field-row">
       <div class="field"><label>Termo de transferência</label><input type="text" id="fTermo"></div>
       <div class="field"><label>Data do registro</label><input type="date" id="fDataRegistro"></div>
     </div>
 
+    <!-- AÇÕES -->
     <div class="modal-actions">
       <button class="btn ghost" id="btnExcluir" style="display:none; border-color:var(--rust-bright); color:var(--rust-bright);">Excluir registro</button>
       <div style="display:flex; gap:10px; margin-left:auto;">
