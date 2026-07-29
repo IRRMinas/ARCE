@@ -59,9 +59,18 @@
       <table>
         <thead>
           <tr>
-            <th>Caixa</th><th>Código</th><th>Classificação</th><th>Referência</th>
-            <th>Processo</th><th>Data-limite</th><th>Prazo corrente</th><th>Prazo intermediário</th>
-            <th>Destinação final</th><th>Localização</th><th>Data registro</th><th>Status</th>
+            <th>Caixa</th>
+            <th>Código</th>
+            <th>Classificação</th>
+            <th>Referência do Documento</th>
+            <th>Nº Processo/EPI</th>
+            <th>Fase Corrente (Ano)</th>
+            <th>Fim do Prazo Corrente</th>
+            <th>Prazo Fase Intermediária</th>
+            <th>Destinação Final</th>
+            <th>Localização no Arquivo Deslizante</th>
+            <th>Data Registro</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="tblRegistros"></tbody>
@@ -78,7 +87,7 @@
     <div class="card" style="padding:18px 20px;">
       <h3 class="section-title">Próximos vencimentos (90 dias)</h3>
       <table>
-        <thead><tr><th>Caixa</th><th>Código</th><th>Classificação</th><th>Data-limite</th><th>Dias restantes</th></tr></thead>
+        <thead><tr><th>Caixa</th><th>Código</th><th>Classificação</th><th>Fase Corrente</th><th>Dias restantes</th></tr></thead>
         <tbody id="tblVencimentos"></tbody>
       </table>
     </div>
@@ -96,7 +105,7 @@
   </div>
 </div>
 
-<!-- MODAL -->
+<!-- MODAL DE CADASTRO / EDIÇÃO -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2 id="modalTitle">Novo registro</h2>
@@ -111,40 +120,49 @@
     <div id="ttdPreview" style="display:none;" class="ttd-preview"></div>
 
     <div class="field-row">
-      <div class="field"><label>Caixa</label><input type="text" id="fCaixa" placeholder="ex: 042"></div>
-      <div class="field"><label>Nº processo / EPI</label><input type="text" id="fProcesso"></div>
+      <div class="field"><label>Caixa</label><input type="text" id="fCaixa" placeholder="ex: Z-01"></div>
+      <div class="field"><label>Nº processo / EPI</label><input type="text" id="fProcesso" placeholder="ex: 25381.000003/2017-93"></div>
     </div>
     <div class="field"><label>Referência do documento</label><input type="text" id="fReferencia" placeholder="Descrição do conteúdo da caixa/documento"></div>
+    
     <div class="field-row">
       <div class="field">
-        <label>Data-limite (ano)</label>
+        <label>Fase Corrente (Ano)</label>
         <select id="fDataLimiteAno" class="mono">
           <option value="">—</option>
         </select>
         <input type="hidden" id="fDataLimite">
         <div class="hint">Calculada automaticamente pela TTD quando possível. Ajuste o ano se necessário.</div>
       </div>
-      <div class="field"><label>Prazo fase corrente</label><input type="text" id="fPrazoCorrente" placeholder="ex: 5 anos"></div>
+      <div class="field"><label>Fim do Prazo Corrente</label><input type="text" id="fPrazoCorrente" placeholder="ex: Enquanto vigora"></div>
     </div>
+
     <div class="field-row">
-      <div class="field"><label>Prazo fase intermediária</label><input type="text" id="fPrazoIntermediario" placeholder="ex: 5 anos"></div>
-      <div class="field"><label>Destinação final</label>
+      <div class="field"><label>Prazo Fase Intermediária</label><input type="text" id="fPrazoIntermediario" placeholder="ex: 5 ANOS"></div>
+      <div class="field"><label>Destinação Final</label>
         <select id="fDestinacao">
           <option value="">—</option>
           <option>Guarda permanente</option>
           <option>Eliminação</option>
+          <option>ELIMINAÇÃO</option>
+          <option>GUARDA PERMANENTE</option>
         </select>
       </div>
     </div>
+
     <div class="field-row">
-      <div class="field"><label>Localização (arquivo deslizante)</label><input type="text" id="fLocalizacao"></div>
+      <div class="field"><label>Localização no Arquivo Deslizante</label><input type="text" id="fLocalizacao" placeholder="ex: C4-P7"></div>
       <div class="field"><label>Estado de conservação</label>
         <select id="fEstado">
           <option value="">—</option>
-          <option>Bom</option><option>Regular</option><option>Ruim</option>
+          <option>Bom</option>
+          <option>Os documentos estão em bom estado.</option>
+          <option>Regular</option>
+          <option>Ruim</option>
         </select>
       </div>
     </div>
+
     <div class="field-row">
       <div class="field"><label>Termo de transferência</label><input type="text" id="fTermo"></div>
       <div class="field"><label>Data do registro</label><input type="date" id="fDataRegistro"></div>
