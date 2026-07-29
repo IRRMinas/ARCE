@@ -596,9 +596,22 @@ async function deletarRegistro(){
 }
 
 /* ==================== EXPORTAÇÃO XLSX ==================== */
-const COLS = ['CAIXA','CÓDIGO','CLASSIFICAÇÃO','REFERÊNCIA DO DOCUMENTO','Nº PROCESSO/EPI','DATA-LIMITE',
-  'PRAZO FASE CORRENTE','PRAZO FASE INTERMEDIÁRIA','DESTINAÇÃO FINAL','LOCALIZAÇÃO NO ARQUIVO DESLIZANTE',
-  'ESTADO DE CONSERVAÇÃO','TERMO DE TRANSFERÊNCIA','DATA DO REGISTRO'];
+/* ==================== EXPORTAÇÃO XLSX ==================== */
+const COLS = [
+  ' CAIXA',
+  'CÓDIGO',
+  'CLASSIFICAÇÃO',
+  'REFERÊNCIA DO DOCUMENTO',
+  'Nº PROCESSO/EPI',
+  'FAZE CORRENTE',
+  'FIM DO PRAZO  CORRENTE',
+  'PRAZO FASE INTERMEDIÁRIA',
+  'DESTINAÇÃO FINAL',
+  'LOCALIZAÇÃO NO ARQUIVO DESLIZANTE',
+  'ESTADO DE CONSERVAÇÃO',
+  'TERMO DE TRANSFERÊNCIA',
+  'DATA DO REGISTRO'
+];
 
 function exportarParaExcel(){
   const data = [COLS];
