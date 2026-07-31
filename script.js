@@ -159,7 +159,7 @@ function logout() {
 async function inicializarSistema() {
     vincularEventosUI();
     bindAutocomplete();
-    bindDataLimiteAno();
+    bindAnoPicker();
     await carregarDadosServidor();
 }
 
@@ -217,31 +217,33 @@ function parseYears(str){
   const m = String(str).match(/(\d+)\s*anos?/i);
   return m ? parseInt(m[1],10) : null;
 }
-function addYears(dateStr, years){
-  if(!dateStr || years==null) return '';
-  const d = new Date(dateStr+'T00:00:00');
-  if(isNaN(d)) return '';
-  d.setFullYear(d.getFullYear()+years);
-  return d.toISOString().slice(0,10);
+/* Extrai todos os anos (4 dígitos) presentes numa string. Funciona tanto
+   com o novo formato ("2027, 2029") quanto com datas ISO antigas
+   ("2029-12-31"), garantindo compatibilidade com registros já salvos. */
+function anosDe(str){
+  if(!str) return [];
+  const m = String(str).match(/\d{4}/g);
+  return m ? [...new Set(m.map(Number))].sort((a,b)=>a-b) : [];
 }
-function computeDataLimite(codigo, dataRegistro){
+function computeAnoLimite(codigo, dataRegistro){
   const entry = TTD_MAP[(codigo||'').toUpperCase().trim()];
-  if(!entry || !dataRegistro) return '';
+  if(!entry || !dataRegistro) return null;
   let anos = parseYears(entry.prazo_corrente);
   if(anos==null) anos = parseYears(entry.prazo_intermediario);
-  if(anos==null) return '';
-  return addYears(dataRegistro, anos);
+  if(anos==null) return null;
+  const d = new Date(dataRegistro+'T00:00:00');
+  if(isNaN(d)) return null;
+  return d.getFullYear() + anos;
 }
 function statusOf(dataLimite){
-  if(!dataLimite) return {key:'ok', label:'Sem data', days:null};
-  const today = new Date(); today.setHours(0,0,0,0);
-  const ymd = String(dataLimite).slice(0,10);
-  const lim = new Date(ymd+'T00:00:00');
-  if(isNaN(lim)) return {key:'ok', label:'Sem data', days:null};
-  const days = Math.round((lim-today)/86400000);
-  if(days<0) return {key:'vencido', label:`Vencido há ${Math.abs(days)}d`, days};
-  if(days<=90) return {key:'avencer', label:`Vence em ${days}d`, days};
-  return {key:'ok', label:'No prazo', days};
+  const anos = anosDe(dataLimite);
+  if(!anos.length) return {key:'ok', label:'Sem ano definido', days:null};
+  const anoRef = anos[anos.length-1]; // ano mais distante marcado na caixa
+  const anoAtual = new Date().getFullYear();
+  const diff = anoRef - anoAtual;
+  if(diff<0) return {key:'vencido', label:`Vencido desde ${anoRef}`, days:diff};
+  if(diff<=1) return {key:'avencer', label:`Vence em ${anoRef}`, days:diff};
+  return {key:'ok', label:`No prazo (${anoRef})`, days:diff};
 }
 function stampClassForDestinacao(dest){
   if(!dest) return 'ok';
@@ -251,8 +253,8 @@ function stampClassForDestinacao(dest){
   return 'ok';
 }
 function anoOf(dataStr){
-  if(!dataStr) return '';
-  return String(dataStr).slice(0,4);
+  const anos = anosDe(dataStr);
+  return anos.length ? anos.join(', ') : '';
 }
 function fmtDataBR(dataStr){
   if(!dataStr) return '';
@@ -305,6 +307,7 @@ function renderRegistros(){
       <td class="mono">${anoOf(r.dataLimite)||'—'}</td>
       <td>${esc(r.prazoCorrente||'—')}</td>
       <td>${esc(r.prazoIntermediario||'—')}</td>
+      <!-- estado de conservação disponível em r.estado, exibido apenas no formulário de edição -->
       <td><span class="stamp ${destStamp}">${esc(r.destinacao||'—')}</span></td>
       <td>${esc(r.localizacao||'—')}</td>
       <td class="mono">${fmtDataBR(r.dataRegistro)||'—'}</td>
@@ -330,13 +333,13 @@ function renderPainel(){
   `;
   const upcoming = RECORDS
     .map(r=>({r, st:statusOf(r.dataLimite)}))
-    .filter(x=>x.st.days!=null && x.st.days>=0 && x.st.days<=90)
+    .filter(x=>x.st.days!=null && x.st.days>=0 && x.st.days<=1)
     .sort((a,b)=>a.st.days-b.st.days);
   document.getElementById('tblVencimentos').innerHTML = upcoming.length ? upcoming.map(x=>`
     <tr><td class="mono">${esc(x.r.caixa||'—')}</td><td><span class="codigo-chip">${esc(x.r.codigo||'—')}</span></td>
     <td>${esc(x.r.classificacao||'')}</td><td class="mono">${anoOf(x.r.dataLimite)}</td>
-    <td><span class="stamp avencer">${x.st.days} dias</span></td></tr>`).join('')
-    : `<tr><td colspan="5" style="color:var(--paper-dim); padding:20px 14px;">Nenhum prazo vencendo nos próximos 90 dias.</td></tr>`;
+    <td><span class="stamp avencer">${x.st.label}</span></td></tr>`).join('')
+    : `<tr><td colspan="5" style="color:var(--paper-dim); padding:20px 14px;">Nenhum prazo vencendo este ano ou no próximo.</td></tr>`;
 }
 
 /* ==================== TABELA DE TEMPORALIDADE ==================== */
@@ -394,39 +397,30 @@ function openModal(id, prefillCodigo){
   document.getElementById('modalTitle').textContent = id ? 'Editar registro' : 'Novo registro';
   document.getElementById('btnExcluir').style.display = id ? 'inline-flex' : 'none';
   const r = id ? RECORDS.find(x=>x.id===id) : null;
-  
-  document.getElementById('fCodigo').value = r ? (r.codigo||'') : (prefillCodigo||'');
-  document.getElementById('fCaixa').value = r ? (r.caixa||'') : '';
-  document.getElementById('fProcesso').value = r ? (r.processo||'') : '';
-  document.getElementById('fReferencia').value = r ? (r.referencia||'') : '';
-  document.getElementById('fDataRegistro').value = r ? (r.dataRegistro||'') : new Date().toISOString().slice(0,10);
-  document.getElementById('fDataLimite').value = r ? (r.dataLimite||'') : '';
-  
-  // Campo Fase Corrente (Ano) - aceita texto livre com múltiplos anos
-  document.getElementById('fDataLimiteAno').value = r ? (r.dataLimite||'') : '';
-  
+  document.getElementById('fCodigo').value = r ? r.codigo : (prefillCodigo||'');
+  document.getElementById('fCaixa').value = r ? r.caixa : '';
+  document.getElementById('fProcesso').value = r ? r.processo : '';
+  document.getElementById('fReferencia').value = r ? r.referencia : '';
+  document.getElementById('fDataRegistro').value = r ? r.dataRegistro : new Date().toISOString().slice(0,10);
   const fPrazoEl = document.getElementById('fPrazoCorrente');
   fPrazoEl.value = r ? (r.prazoCorrente||'') : '';
   delete fPrazoEl.dataset.userEdited;
-  
   const fPrazoIntEl = document.getElementById('fPrazoIntermediario');
   fPrazoIntEl.value = r ? (r.prazoIntermediario||'') : '';
   delete fPrazoIntEl.dataset.userEdited;
-  
   const fDestEl = document.getElementById('fDestinacao');
   fDestEl.value = r ? (r.destinacao||'') : '';
   delete fDestEl.dataset.userEdited;
-  
-  document.getElementById('fLocalizacao').value = r ? (r.localizacao||'') : '';
-  
-  // Estado de Conservação agora é TextArea
+  document.getElementById('fLocalizacao').value = r ? r.localizacao : '';
   document.getElementById('fEstado').value = r ? (r.estado||'') : '';
-  
-  document.getElementById('fTermo').value = r ? (r.termo||'') : '';
-  
+  document.getElementById('fTermo').value = r ? r.termo : '';
+
+  anosSelecionados = r ? anosDe(r.dataLimite) : [];
+  anosUserEdited = false;
+  renderAnoChips();
+
   updateTTDPreview();
   if(!r) computeAndFillDataLimite();
-  
   document.getElementById('overlay').classList.add('active');
   document.getElementById('acList').style.display='none';
 }
@@ -450,9 +444,11 @@ function updateTTDPreview(){
 function computeAndFillDataLimite(){
   const codigo = document.getElementById('fCodigo').value.trim();
   const dataRegistro = document.getElementById('fDataRegistro').value;
-  const calc = computeDataLimite(codigo, dataRegistro);
-  if(calc) document.getElementById('fDataLimite').value = calc;
-  syncDataLimiteAnoFromDate();
+  if(!anosUserEdited){
+    const ano = computeAnoLimite(codigo, dataRegistro);
+    anosSelecionados = ano ? [ano] : [];
+    renderAnoChips();
+  }
   const entry = TTD_MAP[codigo.toUpperCase()];
   const fPrazo = document.getElementById('fPrazoCorrente');
   if(entry && fPrazo && !fPrazo.dataset.userEdited){
@@ -468,35 +464,61 @@ function computeAndFillDataLimite(){
   }
 }
 
-/* ==================== DATA-LIMITE: SELEÇÃO SÓ POR ANO ==================== */
-function populateDataLimiteAnoOptions(){
-  const sel = document.getElementById('fDataLimiteAno');
+/* ==================== FASE CORRENTE: SELEÇÃO DE MÚLTIPLOS ANOS ====================
+   Uma caixa pode conter documentos de vários anos, então o campo aceita
+   quantos anos forem necessários (chips removíveis), em vez de um único
+   valor. O que vai para a planilha é sempre só o(s) ano(s) — nunca uma
+   data completa. */
+let anosSelecionados = [];
+let anosUserEdited = false;
+
+function renderAnoChips(){
+  const box = document.getElementById('anoChips');
+  if(!box) return;
+  anosSelecionados = [...new Set(anosSelecionados)].sort((a,b)=>a-b);
+  box.innerHTML = anosSelecionados.length
+    ? anosSelecionados.map(a=>`<span class="year-chip">${a}<button type="button" class="year-chip-x" data-ano="${a}" title="Remover ${a}">×</button></span>`).join('')
+    : `<span class="year-chip-empty">Nenhum ano selecionado</span>`;
+  document.getElementById('fDataLimite').value = anosSelecionados.join(', ');
+  box.querySelectorAll('.year-chip-x').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      anosSelecionados = anosSelecionados.filter(a=>String(a)!==btn.dataset.ano);
+      anosUserEdited = true;
+      renderAnoChips();
+    });
+  });
+}
+function adicionarAno(valor){
+  const ano = parseInt(valor,10);
+  if(!ano) return;
+  if(!anosSelecionados.includes(ano)) anosSelecionados.push(ano);
+  anosUserEdited = true;
+  renderAnoChips();
+}
+function populateAnoSelect(){
+  const sel = document.getElementById('anoSelect');
   if(!sel || sel.dataset.populated) return;
   const anoAtual = new Date().getFullYear();
-  let opts = '<option value="">—</option>';
-  for(let a = anoAtual - 10; a <= anoAtual + 60; a++){
+  let opts = '';
+  for(let a = anoAtual + 15; a >= anoAtual - 30; a--){
     opts += `<option value="${a}">${a}</option>`;
   }
   sel.innerHTML = opts;
+  sel.value = anoAtual;
   sel.dataset.populated = '1';
 }
-function syncDataLimiteAnoFromDate(){
-  const inputAno = document.getElementById('fDataLimiteAno');
-  const dataLimite = document.getElementById('fDataLimite').value;
-  if(!inputAno) return;
-  if(dataLimite && !inputAno.value){
-    inputAno.value = dataLimite.slice(0,4);
-  }
-}
-function bindDataLimiteAno(){
-  const inputAno = document.getElementById('fDataLimiteAno');
-  const hiddenData = document.getElementById('fDataLimite');
-  if(!inputAno) return;
-  
-  inputAno.addEventListener('input', ()=>{
-    // Salva o valor exato no hidden pra enviar pra planilha
-    hiddenData.value = inputAno.value.trim();
-  });
+function bindAnoPicker(){
+  const fPrazo = document.getElementById('fPrazoCorrente');
+  if(fPrazo) fPrazo.addEventListener('input', ()=>{ fPrazo.dataset.userEdited = '1'; });
+  const fPrazoInt = document.getElementById('fPrazoIntermediario');
+  if(fPrazoInt) fPrazoInt.addEventListener('input', ()=>{ fPrazoInt.dataset.userEdited = '1'; });
+  const fDest = document.getElementById('fDestinacao');
+  if(fDest) fDest.addEventListener('change', ()=>{ fDest.dataset.userEdited = '1'; });
+
+  populateAnoSelect();
+  const btnAdd = document.getElementById('btnAddAno');
+  const sel = document.getElementById('anoSelect');
+  if(btnAdd && sel) btnAdd.addEventListener('click', ()=> adicionarAno(sel.value));
 }
 
 function bindAutocomplete(){
@@ -605,27 +627,14 @@ async function deletarRegistro(){
 }
 
 /* ==================== EXPORTAÇÃO XLSX ==================== */
-/* ==================== EXPORTAÇÃO XLSX ==================== */
-const COLS = [
-  ' CAIXA',
-  'CÓDIGO',
-  'CLASSIFICAÇÃO',
-  'REFERÊNCIA DO DOCUMENTO',
-  'Nº PROCESSO/EPI',
-  'FAZE CORRENTE',
-  'FIM DO PRAZO  CORRENTE',
-  'PRAZO FASE INTERMEDIÁRIA',
-  'DESTINAÇÃO FINAL',
-  'LOCALIZAÇÃO NO ARQUIVO DESLIZANTE',
-  'ESTADO DE CONSERVAÇÃO',
-  'TERMO DE TRANSFERÊNCIA',
-  'DATA DO REGISTRO'
-];
+const COLS = ['id','CAIXA','CÓDIGO','CLASSIFICAÇÃO','REFERÊNCIA DO DOCUMENTO','Nº PROCESSO',
+  'FAZE CORRENTE','FIM DO PRAZO CORRENTE','PRAZO FASE INTERMEDIÁRIA','DESTINAÇÃO FINAL',
+  'LOCALIZAÇÃO NO ARQUIVO DESLIZANTE','ESTADO DE CONSERVAÇÃO','TERMO DE TRANSFERÊNCIA','DATA DO REGISTRO'];
 
 function exportarParaExcel(){
   const data = [COLS];
   RECORDS.forEach(r=>{
-    data.push([r.caixa, r.codigo, r.classificacao, r.referencia, r.processo, r.dataLimite,
+    data.push([r.id, r.caixa, r.codigo, r.classificacao, r.referencia, r.processo, r.dataLimite,
       r.prazoCorrente, r.prazoIntermediario, r.destinacao, r.localizacao, r.estado, r.termo, r.dataRegistro]);
   });
   const ws = XLSX.utils.aoa_to_sheet(data);
