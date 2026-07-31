@@ -181,13 +181,12 @@ tbody td{padding:11px 14px; vertical-align:top;}
   justify-content:center; z-index:50; padding:40px 20px; overflow-y:auto;
 }
 .overlay.active{display:flex;}
-.modal{ background:var(--ink-900); border:1px solid var(--ink-700); border-radius:8px; width:100%; max-width:780px; padding:26px 28px 28px; }
+.modal{ background:var(--ink-900); border:1px solid var(--ink-700); border-radius:8px; width:100%; max-width:640px; padding:26px 28px 28px; }
 .modal h2{font-family:'Source Serif 4',serif; margin:0 0 4px; font-size:19px;}
 .modal .modal-sub{color:var(--paper-dim); font-size:12.5px; margin:0 0 20px;}
 .field{margin-bottom:14px; position:relative;}
 .field label{ display:block; font-size:11px; font-family:'IBM Plex Mono',monospace; letter-spacing:.06em; text-transform:uppercase; color:var(--paper-dim); margin-bottom:6px; }
-.field input, .field select, .field textarea{ width:100%; padding:10px 12px; background:var(--ink-800); border:1px solid var(--ink-700); border-radius:3px; color:var(--paper); font-size:13.5px; font-family: 'IBM Plex Sans', sans-serif; resize: vertical; min-height: 65px;}
-.field textarea:focus { outline: none; border-color: var(--brass); }
+.field input, .field select, .field textarea{ width:100%; padding:10px 12px; background:var(--ink-800); border:1px solid var(--ink-700); border-radius:3px; color:var(--paper); font-size:13.5px; }
 .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--brass);}
 .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 
@@ -344,4 +343,43 @@ tbody td{padding:11px 14px; vertical-align:top;}
 
 @media(max-width:480px){
   .login-card{ padding:30px 22px 26px; }
+}
+
+/* ==========================================================================
+   FORMULÁRIO — textareas grandes + seletor de múltiplos anos (fase corrente)
+   ========================================================================== */
+.field textarea{
+  resize:vertical; min-height:56px; line-height:1.5; font-family:'IBM Plex Sans',sans-serif;
+}
+
+.year-picker{
+  background:var(--ink-800); border:1px solid var(--ink-700); border-radius:3px; padding:12px;
+}
+.year-chips{
+  display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; min-height:28px;
+}
+.year-chip{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:'IBM Plex Mono',monospace; font-size:12.5px; font-weight:600;
+  color:var(--brass-bright); background:rgba(201,161,90,.1);
+  border:1.5px solid var(--brass); border-radius:3px; padding:4px 6px 4px 10px;
+}
+.year-chip-x{
+  background:transparent; border:none; color:var(--brass-bright); opacity:.7;
+  cursor:pointer; font-size:14px; line-height:1; padding:0 2px; font-family:inherit;
+}
+.year-chip-x:hover{opacity:1; color:var(--rust-bright);}
+.year-chip-empty{
+  font-size:12px; color:var(--paper-dim); font-style:italic; padding:4px 2px;
+}
+.year-add{ display:flex; gap:8px; }
+.year-add select{
+  flex:0 0 110px; padding:9px 10px; background:var(--ink-900); border:1px solid var(--ink-700);
+  border-radius:3px; color:var(--paper); font-size:13px;
+}
+.year-add .btn{ flex:0 0 auto; padding:9px 14px; font-size:12.5px; }
+
+@media(max-width:480px){
+  .year-add{ flex-wrap:wrap; }
+  .year-add select{ flex:1 1 auto; }
 }
