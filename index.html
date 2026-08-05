@@ -50,9 +50,11 @@
       </select>
       <select class="filter" id="filterStatus">
         <option value="">Todos os status</option>
-        <option value="vencido">Prazo vencido</option>
-        <option value="avencer">A vencer (este ano/próximo)</option>
-        <option value="ok">Dentro do prazo</option>
+        <option value="ok">No prazo</option>
+        <option value="avencer">A vencer</option>
+        <option value="vencido">Vencido</option>
+        <option value="evento">Depende de evento</option>
+        <option value="semstatus">Sem status definido</option>
       </select>
     </div>
     <div class="card table-card">
@@ -141,14 +143,27 @@
           <option>Eliminação</option>
         </select>
       </div>
+      <div class="field"><label>Status</label>
+        <select id="fStatus">
+          <option value="">—</option>
+          <option>No prazo</option>
+          <option>A vencer</option>
+          <option>Vencido</option>
+          <option>Depende de evento</option>
+        </select>
+        <div class="hint">Definido por você — o sistema não calcula isso sozinho.</div>
+      </div>
+    </div>
+    <div class="field-row">
       <div class="field"><label>Localização (arquivo deslizante)</label><input type="text" id="fLocalizacao"></div>
+      <div class="field"><label>Termo de transferência</label><input type="text" id="fTermo"></div>
     </div>
 
     <div class="field"><label>Estado de conservação</label><textarea id="fEstado" rows="2" placeholder="Descreva o estado de conservação…"></textarea></div>
 
-    <div class="field-row">
-      <div class="field"><label>Termo de transferência</label><input type="text" id="fTermo"></div>
-      <div class="field"><label>Data do registro</label><input type="date" id="fDataRegistro"></div>
+    <div class="field">
+      <label>Data do registro</label>
+      <input type="date" id="fDataRegistro" style="max-width:220px;">
     </div>
 
     <div class="modal-actions">
