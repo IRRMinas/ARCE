@@ -235,16 +235,6 @@ function computeAnoLimite(codigo, dataRegistro){
   if(isNaN(d)) return null;
   return d.getFullYear() + anos;
 }
-function statusOf(dataLimite){
-  const anos = anosDe(dataLimite);
-  if(!anos.length) return {key:'ok', label:'Sem ano definido', days:null};
-  const anoRef = anos[anos.length-1]; // ano mais distante marcado na caixa
-  const anoAtual = new Date().getFullYear();
-  const diff = anoRef - anoAtual;
-  if(diff<0) return {key:'vencido', label:`Vencido desde ${anoRef}`, days:diff};
-  if(diff<=1) return {key:'avencer', label:`Vence em ${anoRef}`, days:diff};
-  return {key:'ok', label:`No prazo (${anoRef})`, days:diff};
-}
 function stampClassForDestinacao(dest){
   if(!dest) return 'ok';
   const d = dest.toLowerCase();
@@ -279,10 +269,24 @@ function filteredRecords(){
       const hay = [r.caixa,r.codigo,r.classificacao,r.referencia,r.processo].join(' ').toLowerCase();
       if(!hay.includes(q)) return false;
     }
-    if(destF && r.destinacao!==destF) return false;
-    if(statF && statusOf(r.dataLimite).key!==statF) return false;
+    // comparação por categoria (case-insensitive), não por texto exato —
+    // a planilha às vezes tem "ELIMINAÇÃO", às vezes "Eliminação".
+    if(destF && stampClassForDestinacao(r.destinacao) !== stampClassForDestinacao(destF)) return false;
+    if(statF && statusStampClass(r.status) !== statF) return false;
     return true;
   });
+}
+
+/* Status agora é decidido pelo arquivista, não calculado pelo sistema —
+   a regra de quando algo "vence" depende de contexto que só quem cuida
+   do arquivo tem (contratos em vigor, avaliações pendentes etc.). */
+function statusStampClass(status){
+  const s = (status||'').toLowerCase();
+  if(s.includes('vencido')) return 'vencido';
+  if(s.includes('vencer')) return 'avencer';
+  if(s.includes('evento')) return 'evento';
+  if(s.includes('prazo')) return 'ok';
+  return 'semstatus';
 }
 
 function renderRegistros(){
@@ -296,7 +300,6 @@ function renderRegistros(){
         : `<div class="big">Nenhum registro encontrado</div><div>Refine sua busca ou limpe os filtros.</div>`;
   }
   tbody.innerHTML = list.map(r=>{
-    const st = statusOf(r.dataLimite);
     const destStamp = stampClassForDestinacao(r.destinacao);
     return `<tr data-id="${r.id}">
       <td class="mono">${esc(r.caixa||'—')}</td>
@@ -311,7 +314,7 @@ function renderRegistros(){
       <td><span class="stamp ${destStamp}">${esc(r.destinacao||'—')}</span></td>
       <td>${esc(r.localizacao||'—')}</td>
       <td class="mono">${fmtDataBR(r.dataRegistro)||'—'}</td>
-      <td><span class="stamp ${st.key}">${st.label}</span></td>
+      <td><span class="stamp ${statusStampClass(r.status)}">${esc(r.status||'Sem status')}</span></td>
     </tr>`;
   }).join('');
   tbody.querySelectorAll('tr').forEach(tr=>{
@@ -323,23 +326,20 @@ function renderPainel(){
   const total = RECORDS.length;
   const permanente = RECORDS.filter(r=>stampClassForDestinacao(r.destinacao)==='permanente').length;
   const eliminacao = RECORDS.filter(r=>stampClassForDestinacao(r.destinacao)==='eliminacao').length;
-  const vencidos = RECORDS.filter(r=>statusOf(r.dataLimite).key==='vencido').length;
+  const vencidos = RECORDS.filter(r=>statusStampClass(r.status)==='vencido').length;
   const grid = document.getElementById('statGrid');
   grid.innerHTML = `
     <div class="stat-card"><div class="num">${total}</div><div class="lbl">TOTAL DE REGISTROS</div></div>
     <div class="stat-card sage"><div class="num">${permanente}</div><div class="lbl">GUARDA PERMANENTE</div></div>
     <div class="stat-card amber"><div class="num">${eliminacao}</div><div class="lbl">ELIMINAÇÃO PREVISTA</div></div>
-    <div class="stat-card rust"><div class="num">${vencidos}</div><div class="lbl">PRAZOS VENCIDOS</div></div>
+    <div class="stat-card rust"><div class="num">${vencidos}</div><div class="lbl">MARCADOS COMO VENCIDOS</div></div>
   `;
-  const upcoming = RECORDS
-    .map(r=>({r, st:statusOf(r.dataLimite)}))
-    .filter(x=>x.st.days!=null && x.st.days>=0 && x.st.days<=1)
-    .sort((a,b)=>a.st.days-b.st.days);
-  document.getElementById('tblVencimentos').innerHTML = upcoming.length ? upcoming.map(x=>`
-    <tr><td class="mono">${esc(x.r.caixa||'—')}</td><td><span class="codigo-chip">${esc(x.r.codigo||'—')}</span></td>
-    <td>${esc(x.r.classificacao||'')}</td><td class="mono">${anoOf(x.r.dataLimite)}</td>
-    <td><span class="stamp avencer">${x.st.label}</span></td></tr>`).join('')
-    : `<tr><td colspan="5" style="color:var(--paper-dim); padding:20px 14px;">Nenhum prazo vencendo este ano ou no próximo.</td></tr>`;
+  const aVencer = RECORDS.filter(r=>statusStampClass(r.status)==='avencer');
+  document.getElementById('tblVencimentos').innerHTML = aVencer.length ? aVencer.map(r=>`
+    <tr><td class="mono">${esc(r.caixa||'—')}</td><td><span class="codigo-chip">${esc(r.codigo||'—')}</span></td>
+    <td>${esc(r.classificacao||'')}</td><td class="mono">${anoOf(r.dataLimite)||'—'}</td>
+    <td><span class="stamp avencer">${esc(r.status)}</span></td></tr>`).join('')
+    : `<tr><td colspan="5" style="color:var(--paper-dim); padding:20px 14px;">Nenhum registro marcado como "A vencer" no momento.</td></tr>`;
 }
 
 /* ==================== TABELA DE TEMPORALIDADE ==================== */
@@ -414,6 +414,7 @@ function openModal(id, prefillCodigo){
   document.getElementById('fLocalizacao').value = r ? r.localizacao : '';
   document.getElementById('fEstado').value = r ? (r.estado||'') : '';
   document.getElementById('fTermo').value = r ? r.termo : '';
+  document.getElementById('fStatus').value = r ? (r.status||'') : '';
 
   anosSelecionados = r ? anosDe(r.dataLimite) : [];
   anosUserEdited = false;
@@ -573,7 +574,8 @@ async function salvarFormulario(){
     estado: document.getElementById('fEstado').value,
     termo: document.getElementById('fTermo').value.trim(),
     prazoCorrente: document.getElementById('fPrazoCorrente').value.trim() || (entry ? entry.prazo_corrente : ''),
-    prazoIntermediario: document.getElementById('fPrazoIntermediario').value.trim() || (entry ? entry.prazo_intermediario : '')
+    prazoIntermediario: document.getElementById('fPrazoIntermediario').value.trim() || (entry ? entry.prazo_intermediario : ''),
+    status: document.getElementById('fStatus').value
   };
   if(!rec.caixa && !rec.codigo){
     showToast('Informe ao menos o código e a caixa.');
@@ -629,13 +631,13 @@ async function deletarRegistro(){
 /* ==================== EXPORTAÇÃO XLSX ==================== */
 const COLS = ['id','CAIXA','CÓDIGO','CLASSIFICAÇÃO','REFERÊNCIA DO DOCUMENTO','Nº PROCESSO',
   'FAZE CORRENTE','FIM DO PRAZO CORRENTE','PRAZO FASE INTERMEDIÁRIA','DESTINAÇÃO FINAL',
-  'LOCALIZAÇÃO NO ARQUIVO DESLIZANTE','ESTADO DE CONSERVAÇÃO','TERMO DE TRANSFERÊNCIA','DATA DO REGISTRO'];
+  'LOCALIZAÇÃO NO ARQUIVO DESLIZANTE','ESTADO DE CONSERVAÇÃO','TERMO DE TRANSFERÊNCIA','DATA DO REGISTRO','STATUS'];
 
 function exportarParaExcel(){
   const data = [COLS];
   RECORDS.forEach(r=>{
     data.push([r.id, r.caixa, r.codigo, r.classificacao, r.referencia, r.processo, r.dataLimite,
-      r.prazoCorrente, r.prazoIntermediario, r.destinacao, r.localizacao, r.estado, r.termo, r.dataRegistro]);
+      r.prazoCorrente, r.prazoIntermediario, r.destinacao, r.localizacao, r.estado, r.termo, r.dataRegistro, r.status]);
   });
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = COLS.map(()=>({wch:20}));
